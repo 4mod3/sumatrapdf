@@ -18,6 +18,10 @@ func must(err error) {
 	u.Must(err)
 }
 
+func panicIf(cond bool, args ...interface{}) {
+	u.PanicIf(cond, args...)
+}
+
 func logf(format string, args ...interface{}) {
 	u.Logf(format, args...)
 }

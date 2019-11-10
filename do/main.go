@@ -51,6 +51,8 @@ func main() {
 		flgSmoke           bool
 		flgClangFormat     bool
 		flgWc              bool
+		flgRegenerateLangs bool
+		flgDownloadTrans   bool
 	)
 
 	{
@@ -63,11 +65,18 @@ func main() {
 		flag.BoolVar(&flgUpload, "upload", false, "upload the build to s3")
 		flag.BoolVar(&flgClangFormat, "clang-format", false, "format source files with clang-format")
 		flag.BoolVar(&flgWc, "wc", false, "line count of source files (like wc -l)")
+		flag.BoolVar(&flgRegenerateLangs, "regenerate-langs", false, "regenerate laangs")
+		flag.BoolVar(&flgDownloadTrans, "download-trans", false, "download translations")
 		flag.Parse()
 	}
 
 	if flgWc {
 		doLineCount()
+		return
+	}
+
+	if flgRegenerateLangs {
+		regenerateLangs()
 		return
 	}
 

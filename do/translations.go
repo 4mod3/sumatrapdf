@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/kjk/u"
 )
@@ -76,39 +77,42 @@ func downloadTranslations() []byte {
 
 }
 
+// Returns 'strings' dict that maps an original, untranslated string to
+// an array of translation, where each translation is a tuple
+// (language, text translated into this language)
+func parseTranslations(s string) map[string][][]string {
+	return nil
+}
+
 /*
-# Returns 'strings' dict that maps an original, untranslated string to
-# an array of translation, where each translation is a tuple
-# (language, text translated into this language)
-def parseTranslations(s):
-    lines = [l for l in s.split("\n")[2:]]
-    # strip empty lines from the end
-    if len(lines[-1]) == 0:
-        lines = lines[:-1]
-    strings = {}
-    curr_str = None
-    curr_translations = None
-    for l in lines:
-        #print("'%s'" % l)
-        #TODO: looks like apptranslator doesn't deal well with strings that
-        # have newlines in them. Newline at the end ends up as an empty line
-        # apptranslator should escape newlines and tabs etc. but for now
-        # skip those lines as harmless
-        if len(l) == 0:
-            continue
-        if l[0] == ':':
-            if curr_str != None:
-                assert curr_translations != None
-                strings[curr_str] = curr_translations
-            curr_str = l[1:]
-            curr_translations = []
-        else:
-            (lang, trans) = l.split(":", 1)
-            curr_translations.append([lang, trans])
-    if curr_str != None:
-        assert curr_translations != None
-        strings[curr_str] = curr_translations
-    return strings
+   lines = [l for l in s.split("\n")[2:]]
+   # strip empty lines from the end
+   if len(lines[-1]) == 0:
+       lines = lines[:-1]
+   strings = {}
+   curr_str = None
+   curr_translations = None
+   for l in lines:
+       #print("'%s'" % l)
+       #TODO: looks like apptranslator doesn't deal well with strings that
+       # have newlines in them. Newline at the end ends up as an empty line
+       # apptranslator should escape newlines and tabs etc. but for now
+       # skip those lines as harmless
+       if len(l) == 0:
+           continue
+       if l[0] == ':':
+           if curr_str != None:
+               assert curr_translations != None
+               strings[curr_str] = curr_translations
+           curr_str = l[1:]
+           curr_translations = []
+       else:
+           (lang, trans) = l.split(":", 1)
+           curr_translations.append([lang, trans])
+   if curr_str != None:
+       assert curr_translations != None
+       strings[curr_str] = curr_translations
+   return strings
 */
 
 /*
@@ -168,59 +172,60 @@ def get_untranslated_as_list(untranslated_dict):
     return util.uniquify(sum(untranslated_dict.values(), []))
 */
 
-/*
-# Generate the various Translations_txt.cpp files based on translations
-# in s that we downloaded from the server
+// Generate the various Translations_txt.cpp files based on translations
+// in s that we downloaded from the server
+func generate_code(s string) {
+	/*
+			strings_dict := parseTranslations(s)
+			strings := extract_strings_from_c_files(true)
+			var strings_list []string
+			for _, tmp := range strings {
+				strings_list = append(strings_list, tmp[0])
+			}
+			for s := range strings_dict {
+				panic("NYI")
 
+				if _, ok := strings_list[s]; !ok {
+					delete(strings_list, s)
+				}
+		    }
+	*/
+	panic("NYI")
+	/*
+	   untranslated_dict = dump_missing_per_language(strings_list, strings_dict)
+	   untranslated = get_untranslated_as_list(untranslated_dict)
+	   for s in untranslated:
+	       if s not in strings_dict:
+	           strings_dict[s] = []
+	   gen_c_code(strings_dict, strings)
+	*/
+}
 
-def generate_code(s):
-    strings_dict = parseTranslations(s)
-    strings = extract_strings_from_c_files(True)
-    strings_list = [tmp[0] for tmp in strings]
-    for s in strings_dict.keys():
-        if s not in strings_list:
-            del strings_dict[s]
-    untranslated_dict = dump_missing_per_language(strings_list, strings_dict)
-    untranslated = get_untranslated_as_list(untranslated_dict)
-    for s in untranslated:
-        if s not in strings_dict:
-            strings_dict[s] = []
-	gen_c_code(strings_dict, strings)
-*/
+func downloadAndUpdateTranslationsIfChanged() bool {
+	s := downloadTranslations()
+	lines := strings.Split(string(s), "\n")
+	panicIf(len(lines) < 2, "Bad response, less than 2 lines:\n'%s'\n", string(s))
+	panicIf(lines[0] != "AppTranslator: SumatraPDF", "Bad response, invalid first line:\n'%s'\n", lines[0])
+	sha1 := lines[1]
+	if strings.HasPrefix(sha1, "No change") {
+		fmt.Print("skipping because translations haven't changed\n")
+		return false
+	}
 
-/*
-def downloadAndUpdateTranslationsIfChanged():
-    try:
-        s = downloadTranslations()
-    except:
-        # might fail due to intermitten network problems, ignore that
-        print("skipping because downloadTranslations() failed")
-        return
-    lines = s.split("\n")
-    if len(lines) < 2:
-        print("Bad response, less than 2 lines: '%s'" % s)
-        return False
-    if lines[0] != "AppTranslator: SumatraPDF":
-        print("Bad response, invalid first line: '%s'" % lines[0])
-        print(s)
-        return False
-    sha1 = lines[1]
-    if sha1.startswith("No change"):
-        print("skipping because translations haven't changed")
-        return False
-    if not validSha1(sha1):
-        print("Bad reponse, invalid sha1 on second line: '%s'", sha1)
-        return False
-    print("Translation data size: %d" % len(s))
-    # print(s)
-    generate_code(s)
-    saveLastDownload(s)
-    return True
-*/
+	if !validSha1(sha1) {
+		fmt.Printf("Bad reponse, invalid sha1 on second line: '%s'\n", sha1)
+		return false
+	}
+	fmt.Printf("Translation data size: %d\n", len(s))
 
-/*
-def regenerateLangs():
-    s = open(lastDownloadFilePath(), "rb").read()
-    generate_code(s)
-    sys.exit(1)
-*/
+	generate_code(string(s))
+	saveLastDownload(s)
+
+	return true
+}
+
+func regenerateLangs() {
+	path := lastDownloadFilePath()
+	s := u.ReadFileMust(path)
+	generate_code(string(s))
+}
